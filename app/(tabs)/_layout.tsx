@@ -10,22 +10,22 @@ export default function TabLayout() {
       name: 'Home',
       title: 'Home',
       route: '/(tabs)/(home)',
-      ios_icon_name: 'house.fill',
-      android_material_icon_name: 'home',
+      icon: 'home',
+      label: 'Home',
     },
     {
       name: 'Progress',
       title: 'Progress',
       route: '/(tabs)/progress',
-      ios_icon_name: 'chart.bar.fill',
-      android_material_icon_name: 'show-chart',
+      icon: 'show-chart',
+      label: 'Progress',
     },
     {
       name: 'Profile',
       title: 'Profile',
       route: '/(tabs)/profile',
-      ios_icon_name: 'person.fill',
-      android_material_icon_name: 'person',
+      icon: 'person',
+      label: 'Profile',
     },
   ];
 
