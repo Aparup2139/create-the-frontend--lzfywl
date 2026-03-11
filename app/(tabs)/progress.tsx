@@ -13,6 +13,13 @@ import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function ProgressScreen() {
+  const improvementPercentage = 12;
+  const improvementText = `+${improvementPercentage}%`;
+  const totalScans = 8;
+  const totalScansText = totalScans.toString();
+  const daysActive = 14;
+  const daysActiveText = daysActive.toString();
+
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
@@ -44,7 +51,7 @@ export default function ProgressScreen() {
                     color={colors.card}
                   />
                 </View>
-                <Text style={styles.progressValue}>+12%</Text>
+                <Text style={styles.progressValue}>{improvementText}</Text>
                 <Text style={styles.progressSubtitle}>
                   Your skin health improved this week!
                 </Text>
@@ -63,7 +70,7 @@ export default function ProgressScreen() {
                   size={28}
                   color={colors.primary}
                 />
-                <Text style={styles.statValue}>8</Text>
+                <Text style={styles.statValue}>{totalScansText}</Text>
                 <Text style={styles.statLabel}>Total Scans</Text>
               </View>
               <View style={styles.statCard}>
@@ -73,7 +80,7 @@ export default function ProgressScreen() {
                   size={28}
                   color={colors.secondary}
                 />
-                <Text style={styles.statValue}>14</Text>
+                <Text style={styles.statValue}>{daysActiveText}</Text>
                 <Text style={styles.statLabel}>Days Active</Text>
               </View>
             </View>

@@ -23,12 +23,12 @@ export default function HomeScreen() {
   const healthScoreText = healthScore.toString();
 
   const handleScanPress = () => {
-    console.log('User tapped scan button');
+    console.log('User tapped scan button - navigating to camera');
     router.push('/camera');
   };
 
   const handleNotificationPress = () => {
-    console.log('User tapped notifications');
+    console.log('User tapped notifications button');
     // TODO: Navigate to notifications screen
   };
 
@@ -49,7 +49,7 @@ export default function HomeScreen() {
               ios_icon_name="bell.fill"
               android_material_icon_name="notifications"
               size={24}
-              color={colors.text}
+              color={colors.primary}
             />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>

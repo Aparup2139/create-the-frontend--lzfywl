@@ -13,6 +13,18 @@ import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function ProfileScreen() {
+  const handleNotificationPress = () => {
+    console.log('User tapped Notifications setting');
+  };
+
+  const handlePrivacyPress = () => {
+    console.log('User tapped Privacy setting');
+  };
+
+  const handleHelpPress = () => {
+    console.log('User tapped Help & Support');
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
@@ -63,7 +75,7 @@ export default function ProfileScreen() {
           {/* Settings */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Settings</Text>
-            <TouchableOpacity style={styles.settingCard}>
+            <TouchableOpacity style={styles.settingCard} onPress={handleNotificationPress}>
               <IconSymbol
                 ios_icon_name="bell.fill"
                 android_material_icon_name="notifications"
@@ -79,7 +91,7 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.settingCard}>
+            <TouchableOpacity style={styles.settingCard} onPress={handlePrivacyPress}>
               <IconSymbol
                 ios_icon_name="lock.fill"
                 android_material_icon_name="lock"
@@ -95,7 +107,7 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.settingCard}>
+            <TouchableOpacity style={styles.settingCard} onPress={handleHelpPress}>
               <IconSymbol
                 ios_icon_name="questionmark.circle.fill"
                 android_material_icon_name="help"
