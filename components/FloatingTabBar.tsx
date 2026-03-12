@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,19 +10,20 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
-import { BlurView } from 'expo-blur';
-import { useTheme } from '@react-navigation/native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  interpolate,
-} from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
 import { Href } from 'expo-router';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export interface TabBarItem {
   name: string;
@@ -32,182 +33,147 @@ export interface TabBarItem {
   title?: string;
   ios_icon_name?: string;
   android_material_icon_name?: string;
+  special?: boolean;
 }
 
 interface FloatingTabBarProps {
   tabs: TabBarItem[];
-  containerWidth?: number;
-  borderRadius?: number;
-  bottomMargin?: number;
 }
 
-export default function FloatingTabBar({
-  tabs,
-  containerWidth = screenWidth * 0.9,
-  borderRadius = 35,
-  bottomMargin
-}: FloatingTabBarProps) {
+const TEAL = '#7ECECE';
+const TEAL_LIGHT = '#B5EAEA';
+const INACTIVE = '#A0B8B8';
+
+export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const theme = useTheme();
-  const animatedValue = useSharedValue(0);
 
-  // Improved active tab detection with better path matching
+  const regularTabs = tabs.filter((t) => !t.special);
+  const allTabsCount = tabs.length;
+
   const activeTabIndex = React.useMemo(() => {
-    // Find the best matching tab based on the current pathname
     let bestMatch = -1;
-    let bestMatchScore = 0;
-
+    let bestScore = 0;
     tabs.forEach((tab, index) => {
+      if (tab.special) return;
       let score = 0;
-
-      // Exact route match gets highest score
-      if (pathname === tab.route) {
-        score = 100;
-      }
-      // Check if pathname starts with tab route (for nested routes)
-      else if (pathname.startsWith(tab.route as string)) {
-        score = 80;
-      }
-      // Check if pathname contains the tab name
-      else if (pathname.includes(tab.name.toLowerCase())) {
-        score = 60;
-      }
-      // Check for partial matches in the route
-      else if (tab.route.includes('/(tabs)/') && pathname.includes(tab.route.split('/(tabs)/')[1])) {
+      if (pathname === tab.route) score = 100;
+      else if (pathname.startsWith(tab.route as string)) score = 80;
+      else if (pathname.includes(tab.name.toLowerCase())) score = 60;
+      else if (
+        typeof tab.route === 'string' &&
+        (tab.route as string).includes('/(tabs)/') &&
+        pathname.includes((tab.route as string).split('/(tabs)/')[1])
+      )
         score = 40;
-      }
-
-      if (score > bestMatchScore) {
-        bestMatchScore = score;
+      if (score > bestScore) {
+        bestScore = score;
         bestMatch = index;
       }
     });
-
-    // Default to first tab if no match found
     return bestMatch >= 0 ? bestMatch : 0;
   }, [pathname, tabs]);
 
-  React.useEffect(() => {
-    if (activeTabIndex >= 0) {
-      animatedValue.value = withSpring(activeTabIndex, {
-        damping: 20,
-        stiffness: 120,
-        mass: 1,
-      });
-    }
-  }, [activeTabIndex, animatedValue]);
+  // Animated indicator for active tab
+  const indicatorX = useSharedValue(0);
+  const scanScale = useSharedValue(1);
 
-  const handleTabPress = (route: Href) => {
-    console.log('User tapped tab:', route);
-    router.push(route);
-  };
+  useEffect(() => {
+    // Small bounce on mount for scan button
+    scanScale.value = withTiming(1.05, { duration: 300, easing: Easing.out(Easing.quad) }, () => {
+      scanScale.value = withSpring(1, { damping: 14, stiffness: 160 });
+    });
+  }, []);
 
-  const tabWidthPercent = ((100 / tabs.length) - 1).toFixed(2);
+  useEffect(() => {
+    const tabWidth = SCREEN_WIDTH / allTabsCount;
+    indicatorX.value = withSpring(activeTabIndex * tabWidth + tabWidth / 2 - 14, {
+      damping: 22,
+      stiffness: 200,
+      mass: 0.8,
+    });
+  }, [activeTabIndex]);
 
-  const indicatorStyle = useAnimatedStyle(() => {
-    const tabWidth = (containerWidth - 8) / tabs.length; // Account for container padding (4px on each side)
-    return {
-      transform: [
-        {
-          translateX: interpolate(
-            animatedValue.value,
-            [0, tabs.length - 1],
-            [0, tabWidth * (tabs.length - 1)]
-          ),
-        },
-      ],
-    };
-  });
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
 
-  // Dynamic styles based on theme
-  const dynamicStyles = {
-    blurContainer: {
-      ...styles.blurContainer,
-      borderWidth: 1.2,
-      borderColor: 'rgba(129, 201, 201, 0.3)',
-      ...Platform.select({
-        ios: {
-          backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.8)'
-            : 'rgba(255, 255, 255, 0.85)',
-        },
-        android: {
-          backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.95)'
-            : 'rgba(255, 255, 255, 0.95)',
-        },
-        web: {
-          backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.95)'
-            : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-        },
-      }),
-    },
-    background: {
-      ...styles.background,
-    },
-    indicator: {
-      ...styles.indicator,
-      backgroundColor: theme.dark
-        ? 'rgba(129, 201, 201, 0.2)' // Soft teal overlay in dark mode
-        : 'rgba(129, 201, 201, 0.15)', // Soft teal overlay in light mode
-      width: `${tabWidthPercent}%` as `${number}%`, // Dynamic width based on number of tabs
-    },
-  };
+  const scanAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scanScale.value }],
+  }));
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <View style={[
-        styles.container,
-        {
-          width: containerWidth,
-          marginBottom: bottomMargin ?? 20
-        }
-      ]}>
-        <BlurView
-          intensity={80}
-          style={[dynamicStyles.blurContainer, { borderRadius }]}
-        >
-          <View style={dynamicStyles.background} />
-          <Animated.View style={[dynamicStyles.indicator, indicatorStyle]} />
-          <View style={styles.tabsContainer}>
-            {tabs.map((tab, index) => {
-              const isActive = activeTabIndex === index;
-              const iconName = tab.android_material_icon_name || tab.icon;
+      {/* Soft top separator */}
+      <View style={styles.separator} />
 
+      <BlurView
+        intensity={Platform.OS === 'ios' ? 60 : 0}
+        style={styles.blurContainer}
+      >
+        <View
+          style={[
+            styles.tabBar,
+            Platform.OS !== 'ios' && styles.tabBarAndroid,
+          ]}
+        >
+          {/* Animated dot indicator */}
+          <Animated.View style={[styles.indicator, indicatorStyle]} />
+
+          {tabs.map((tab, index) => {
+            if (tab.special) {
               return (
-                <React.Fragment key={index}>
                 <TouchableOpacity
-                  style={styles.tab}
-                  onPress={() => handleTabPress(tab.route)}
-                  activeOpacity={0.7}
+                  key={index}
+                  style={styles.specialTabItem}
+                  onPress={() => router.push(tab.route)}
+                  activeOpacity={0.85}
                 >
-                  <View style={styles.tabContent}>
-                    <IconSymbol
-                      android_material_icon_name={iconName}
-                      ios_icon_name={tab.ios_icon_name || iconName}
-                      size={24}
-                      color={isActive ? '#81C9C9' : (theme.dark ? '#98989D' : '#718096')}
-                    />
-                    <Text
-                      style={[
-                        styles.tabLabel,
-                        { color: theme.dark ? '#98989D' : '#718096' },
-                        isActive && { color: '#81C9C9', fontWeight: '600' },
-                      ]}
+                  <Animated.View style={scanAnimStyle}>
+                    <LinearGradient
+                      colors={['#FFD4C4', '#FFB8A3']}
+                      style={styles.specialBtn}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
                     >
-                      {tab.label}
-                    </Text>
-                  </View>
+                      <MaterialIcons name={tab.icon} size={24} color="#FFFFFF" />
+                      <Text style={styles.specialBtnLabel}>{tab.label}</Text>
+                    </LinearGradient>
+                  </Animated.View>
                 </TouchableOpacity>
-                </React.Fragment>
               );
-            })}
-          </View>
-        </BlurView>
-      </View>
+            }
+
+            const isActive = activeTabIndex === index;
+            const iconName = (
+              tab.android_material_icon_name || tab.icon
+            ) as keyof typeof MaterialIcons.glyphMap;
+
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.tabItem}
+                onPress={() => router.push(tab.route)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name={iconName}
+                  size={23}
+                  color={isActive ? TEAL : INACTIVE}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    isActive && styles.tabLabelActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </BlurView>
     </SafeAreaView>
   );
 }
@@ -218,51 +184,75 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 1000,
-    alignItems: 'center',
+    overflow: 'visible',
   },
-  container: {
-    marginHorizontal: 20,
-    alignSelf: 'center',
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(126,206,206,0.18)',
   },
   blurContainer: {
-    overflow: 'hidden',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    overflow: 'visible',
   },
-  background: {
-    ...StyleSheet.absoluteFillObject,
+  tabBar: {
+    flexDirection: 'row',
+    height: 58,
+    alignItems: 'center',
+    backgroundColor: 'rgba(244,254,254,0.92)',
+    overflow: 'visible',
   },
+  tabBarAndroid: {
+    backgroundColor: 'rgba(244,254,254,0.97)',
+  },
+  // Tiny animated active dot indicator above the icon
   indicator: {
     position: 'absolute',
-    top: 4,
-    left: 2,
-    bottom: 4,
-    borderRadius: 27,
+    top: 6,
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: TEAL_LIGHT,
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    height: 60,
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  tab: {
+  tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  tabContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 7,
     gap: 2,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '500',
-    marginTop: 2,
+    color: INACTIVE,
+    letterSpacing: 0.2,
+  },
+  tabLabelActive: {
+    color: TEAL,
+    fontWeight: '600',
+  },
+  // Special center Scan button
+  specialTabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+    marginTop: -18,
+  },
+  specialBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+    shadowColor: 'rgba(255,184,163,0.5)',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  specialBtnLabel: {
+    color: '#FFFFFF',
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });
