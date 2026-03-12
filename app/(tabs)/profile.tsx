@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Animated,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
 
-// ── Palette (shared with home) ────────────────────────────────────────────────
+// ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
   bg: '#F4FEFE',
   card: '#FFFFFF',
@@ -29,20 +24,16 @@ const C = {
   peach: '#FFB8A3',
   peachLight: '#FFE3DA',
   lavender: '#C4B5FD',
-  lavenderLight: '#EDE9FE',
-  sage: '#9DC8AC',
   textDark: '#1E3A3A',
   textMid: '#5A8080',
   textLight: '#9ABABA',
-  border: '#E4F2F2',
   shadow: 'rgba(126,206,206,0.12)',
   headerGrad: ['#CBF0F0', '#8ED3D3'] as const,
   skyGrad: ['#BAD8FA', '#80BAEC'] as const,
   lavGrad: ['#DDD6FE', '#C4B5FD'] as const,
-  peachGrad: ['#FFD4C4', '#FFB8A3'] as const,
 };
 
-// ── Animated wrapper ──────────────────────────────────────────────────────────
+// ── FadeSlideIn ───────────────────────────────────────────────────────────────
 function FadeSlideIn({
   children,
   delay = 0,
@@ -50,26 +41,33 @@ function FadeSlideIn({
   children: React.ReactNode;
   delay?: number;
 }) {
-  const opacity = useSharedValue(0);
-  const ty = useSharedValue(16);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const ty = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
-    opacity.value = withDelay(
-      delay,
-      withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) })
-    );
-    ty.value = withDelay(
-      delay,
-      withTiming(0, { duration: 460, easing: Easing.out(Easing.cubic) })
-    );
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 520,
+        delay,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(ty, {
+        toValue: 0,
+        duration: 460,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  const anim = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: ty.value }],
-  }));
-
-  return <Animated.View style={anim}>{children}</Animated.View>;
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY: ty }] }}>
+      {children}
+    </Animated.View>
+  );
 }
 
 // ── Setting row ───────────────────────────────────────────────────────────────
@@ -154,7 +152,6 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Soft teal gradient header */}
       <LinearGradient
         colors={C.headerGrad}
         style={styles.headerGrad}
@@ -171,72 +168,43 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Account banner */}
         <FadeSlideIn delay={0}>
-          <LinearGradient
-            colors={C.skyGrad}
-            style={styles.banner}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <LinearGradient colors={C.skyGrad} style={styles.banner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.bannerTitle}>Account</Text>
-              <Text style={styles.bannerSub}>
-                {'Choose the best plan\nfor you.'}
-              </Text>
+              <Text style={styles.bannerSub}>{'Choose the best plan\nfor you.'}</Text>
             </View>
             <Text style={styles.bannerStar}>⭐</Text>
           </LinearGradient>
         </FadeSlideIn>
 
-        {/* Current plan card */}
         <FadeSlideIn delay={80}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Your current plan</Text>
             <PlanRow icon="star-outline" label="Plan" value="Free" />
             <PlanRow icon="photo-library" label="Number of photos" value={0} />
-            <PlanRow
-              icon="check-box-outline-blank"
-              label="Photos left"
-              value={0}
-              showDivider={false}
-            />
+            <PlanRow icon="check-box-outline-blank" label="Photos left" value={0} showDivider={false} />
           </View>
         </FadeSlideIn>
 
-        {/* Add to plan button */}
         <FadeSlideIn delay={140}>
-          <LinearGradient
-            colors={[C.teal, '#5AACAC']}
-            style={styles.addPlanBtn}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
+          <LinearGradient colors={[C.teal, '#5AACAC']} style={styles.addPlanBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
             <TouchableOpacity style={styles.addPlanBtnInner} activeOpacity={0.8}>
               <Text style={styles.addPlanBtnText}>Add to your plan</Text>
             </TouchableOpacity>
           </LinearGradient>
         </FadeSlideIn>
 
-        {/* Premium banner */}
         <FadeSlideIn delay={190}>
-          <LinearGradient
-            colors={C.lavGrad}
-            style={styles.premiumBanner}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
+          <LinearGradient colors={C.lavGrad} style={styles.premiumBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.premiumTitle}>{'Get Premium\nAccount'}</Text>
-              <Text style={styles.premiumSub}>
-                {'Choose the best plan\nfor you.'}
-              </Text>
+              <Text style={styles.premiumSub}>{'Choose the best plan\nfor you.'}</Text>
             </View>
             <Text style={styles.premiumStar}>⭐</Text>
           </LinearGradient>
         </FadeSlideIn>
 
-        {/* Disclaimer */}
         <FadeSlideIn delay={240}>
           <View style={styles.disclaimer}>
             <View style={styles.disclaimerIconWrap}>
@@ -244,33 +212,21 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.disclaimerText}>
               <Text style={styles.disclaimerBold}>Not a medical device. </Text>
-              For educational and self-assessment purposes only. Consult a
-              dermatologist for any concerns.
+              For educational and self-assessment purposes only. Consult a dermatologist for any concerns.
             </Text>
           </View>
         </FadeSlideIn>
 
-        {/* Settings */}
         <FadeSlideIn delay={290}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.settingsCard}>
             <SettingRow icon="transgender" label="Gender" rightValue="Male" />
             <SettingRow icon="grain" label="Skin type" />
             <SettingRow icon="warning-amber" label="Skin Risk Detector" />
-            <SettingRow
-              icon="notifications-none"
-              label="Notifications"
-              isToggle
-              toggleVal={notifOn}
-              onToggle={setNotifOn}
-            />
+            <SettingRow icon="notifications-none" label="Notifications" isToggle toggleVal={notifOn} onToggle={setNotifOn} />
             <SettingRow icon="description" label="Terms and conditions" />
             <SettingRow icon="security" label="Privacy policy" />
-            <SettingRow
-              icon="shield"
-              label="Privacy settings"
-              showDivider={false}
-            />
+            <SettingRow icon="shield" label="Privacy settings" showDivider={false} />
           </View>
         </FadeSlideIn>
 
@@ -283,194 +239,46 @@ export default function ProfileScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-
-  // Header
   headerGrad: { paddingBottom: 20, paddingHorizontal: 24 },
-  headerTitle: {
-    fontSize: 21,
-    fontWeight: '700',
-    color: C.textDark,
-    textAlign: 'center',
-    paddingTop: 16,
-    paddingBottom: 4,
-    letterSpacing: 0.2,
-  },
+  headerTitle: { fontSize: 21, fontWeight: '700', color: C.textDark, textAlign: 'center', paddingTop: 16, paddingBottom: 4, letterSpacing: 0.2 },
 
-  // Scroll
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20 },
 
-  // Account / Sky banner
-  banner: {
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  bannerTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  bannerSub: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.88)',
-    lineHeight: 18,
-  },
+  banner: { borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  bannerTitle: { fontSize: 19, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
+  bannerSub: { fontSize: 13, color: 'rgba(255,255,255,0.88)', lineHeight: 18 },
   bannerStar: { fontSize: 46, marginLeft: 8 },
 
-  // Plan card
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.textDark,
-    marginBottom: 12,
-  },
-  planRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 10,
-  },
-  planIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: C.tealExtraLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  card: { backgroundColor: C.card, borderRadius: 20, padding: 16, marginBottom: 14, shadowColor: C.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 },
+  cardTitle: { fontSize: 14, fontWeight: '600', color: C.textDark, marginBottom: 12 },
+
+  planRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 },
+  planIconWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.tealExtraLight, alignItems: 'center', justifyContent: 'center' },
   planLabel: { flex: 1, fontSize: 13.5, color: C.textMid },
   planValue: { fontSize: 13.5, fontWeight: '700', color: C.textDark },
-  planDivider: {
-    height: 1,
-    backgroundColor: '#EEF9F9',
-    marginLeft: 40,
-  },
+  planDivider: { height: 1, backgroundColor: '#EEF9F9', marginLeft: 40 },
 
-  // Add plan button
-  addPlanBtn: {
-    borderRadius: 30,
-    marginBottom: 14,
-    shadowColor: 'rgba(126,206,206,0.35)',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  addPlanBtnInner: {
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  addPlanBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  addPlanBtn: { borderRadius: 30, marginBottom: 14, shadowColor: 'rgba(126,206,206,0.35)', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 1, shadowRadius: 10, elevation: 5 },
+  addPlanBtnInner: { paddingVertical: 15, alignItems: 'center' },
+  addPlanBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
 
-  // Premium banner
-  premiumBanner: {
-    borderRadius: 20,
-    marginBottom: 14,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  premiumTitle: {
-    fontSize: 21,
-    fontWeight: '800',
-    color: '#3D2E7C',
-    lineHeight: 27,
-    marginBottom: 6,
-  },
-  premiumSub: {
-    fontSize: 13,
-    color: 'rgba(61,46,124,0.75)',
-    lineHeight: 18,
-  },
+  premiumBanner: { borderRadius: 20, marginBottom: 14, padding: 20, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  premiumTitle: { fontSize: 21, fontWeight: '800', color: '#3D2E7C', lineHeight: 27, marginBottom: 6 },
+  premiumSub: { fontSize: 13, color: 'rgba(61,46,124,0.75)', lineHeight: 18 },
   premiumStar: { fontSize: 58, marginLeft: 8 },
 
-  // Disclaimer
-  disclaimer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF5EE',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 22,
-    gap: 10,
-    alignItems: 'flex-start',
-    borderLeftWidth: 3,
-    borderLeftColor: C.peach,
-  },
-  disclaimerIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: C.peachLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
+  disclaimer: { flexDirection: 'row', backgroundColor: '#FFF5EE', borderRadius: 16, padding: 14, marginBottom: 22, gap: 10, alignItems: 'flex-start', borderLeftWidth: 3, borderLeftColor: C.peach },
+  disclaimerIconWrap: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.peachLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   disclaimerText: { flex: 1, fontSize: 12.5, color: '#8B5740', lineHeight: 18 },
   disclaimerBold: { fontWeight: '700' },
 
-  // Settings
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: C.textDark,
-    marginBottom: 12,
-  },
-  settingsCard: {
-    backgroundColor: C.card,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  settingIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: C.tealExtraLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: C.textDark, marginBottom: 12 },
+  settingsCard: { backgroundColor: C.card, borderRadius: 20, overflow: 'hidden', shadowColor: C.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, gap: 12 },
+  settingIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.tealExtraLight, alignItems: 'center', justifyContent: 'center' },
   settingLabel: { flex: 1, fontSize: 14, color: C.textMid },
   settingRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  settingRightVal: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: C.textDark,
-  },
-  settingDivider: {
-    height: 1,
-    backgroundColor: '#EEF9F9',
-    marginLeft: 60,
-  },
+  settingRightVal: { fontSize: 13.5, fontWeight: '700', color: C.textDark },
+  settingDivider: { height: 1, backgroundColor: '#EEF9F9', marginLeft: 60 },
 });

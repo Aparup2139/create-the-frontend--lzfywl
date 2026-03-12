@@ -1,31 +1,42 @@
-import React from "react";
+
+import React, { useRef, useEffect } from "react";
 import * as Haptics from "expo-haptics";
-import { Pressable, StyleSheet, useColorScheme, View, Text } from "react-native";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import Animated, {
-  configureReanimatedLogger,
-  FadeIn,
-  SharedValue,
-  useAnimatedStyle,
-} from "react-native-reanimated";
-import Reanimated from "react-native-reanimated";
+import {
+  Pressable,
+  StyleSheet,
+  useColorScheme,
+  View,
+  Text,
+  Animated,
+} from "react-native";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 import { appleRed, borderColor } from "@/constants/Colors";
 import { IconCircle } from "./IconCircle";
 import { IconSymbol } from "./IconSymbol";
-
-configureReanimatedLogger({ strict: false });
 
 export default function ListItem({ listId }: { listId: string }) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
+  // Fade-in on mount using built-in Animated
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   const RightAction = (
-    prog: SharedValue<number>,
-    drag: SharedValue<number>
+    _progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
   ) => {
-    const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + 200 }],
-    }));
+    const scale = dragX.interpolate({
+      inputRange: [-200, -20],
+      outputRange: [1, 0.7],
+      extrapolate: "clamp",
+    });
 
     return (
       <Pressable
@@ -36,29 +47,34 @@ export default function ListItem({ listId }: { listId: string }) {
           console.log("delete");
         }}
       >
-        <Reanimated.View style={[styleAnimation, styles.rightAction]}>
+        <Animated.View style={[styles.rightAction, { transform: [{ scale }] }]}>
           <IconSymbol name="trash.fill" size={24} color="white" />
-        </Reanimated.View>
+        </Animated.View>
       </Pressable>
     );
   };
 
   return (
-    <Animated.View entering={FadeIn}>
-      <ReanimatedSwipeable
+    <Animated.View style={{ opacity: fadeAnim }}>
+      <Swipeable
         key={listId}
         friction={2}
         enableTrackpadTwoFingerGesture
         rightThreshold={40}
         renderRightActions={RightAction}
         overshootRight={false}
-        enableContextMenu
       >
         <View style={styles.listItemContainer}>
-          <Text style={[styles.listItemText, { color: isDark ? "#FFFFFF" : "#000000" }]}>{listId}</Text>
+          <Text
+            style={[
+              styles.listItemText,
+              { color: isDark ? "#FFFFFF" : "#000000" },
+            ]}
+          >
+            {listId}
+          </Text>
         </View>
-
-      </ReanimatedSwipeable>
+      </Swipeable>
     </Animated.View>
   );
 }
@@ -110,39 +126,6 @@ const styles = StyleSheet.create({
     backgroundColor: appleRed,
     alignItems: "center",
     justifyContent: "center",
-  },
-  swipeable: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: borderColor,
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  leftContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flexShrink: 1,
-  },
-  textContent: {
-    flexShrink: 1,
-  },
-  productCount: {
-    fontSize: 12,
-    color: "gray",
-  },
-  rightContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  nicknameContainer: {
-    flexDirection: "row",
-    marginRight: 4,
   },
   nicknameCircle: {
     fontSize: 12,
