@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,20 +7,14 @@ import {
   StyleSheet,
   Platform,
   Dimensions,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolate,
-  Easing,
-} from 'react-native-reanimated';
 import { Href } from 'expo-router';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -48,9 +42,6 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const regularTabs = tabs.filter((t) => !t.special);
-  const allTabsCount = tabs.length;
-
   const activeTabIndex = React.useMemo(() => {
     let bestMatch = -1;
     let bestScore = 0;
@@ -74,62 +65,53 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
     return bestMatch >= 0 ? bestMatch : 0;
   }, [pathname, tabs]);
 
-  // Animated indicator for active tab
-  const indicatorX = useSharedValue(0);
-  const scanScale = useSharedValue(1);
+  // Smooth sliding indicator
+  const indicatorX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Small bounce on mount for scan button
-    scanScale.value = withTiming(1.05, { duration: 300, easing: Easing.out(Easing.quad) }, () => {
-      scanScale.value = withSpring(1, { damping: 14, stiffness: 160 });
-    });
-  }, []);
-
-  useEffect(() => {
-    const tabWidth = SCREEN_WIDTH / allTabsCount;
-    indicatorX.value = withSpring(activeTabIndex * tabWidth + tabWidth / 2 - 14, {
-      damping: 22,
-      stiffness: 200,
-      mass: 0.8,
-    });
+    const tabWidth = SCREEN_WIDTH / tabs.length;
+    Animated.spring(indicatorX, {
+      toValue: activeTabIndex * tabWidth + tabWidth / 2 - 14,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 120,
+    }).start();
   }, [activeTabIndex]);
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-  }));
-
-  const scanAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scanScale.value }],
-  }));
+  // Scan button gentle bounce on mount
+  const scanScale = useRef(new Animated.Value(0.9)).current;
+  useEffect(() => {
+    Animated.spring(scanScale, {
+      toValue: 1,
+      friction: 5,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      {/* Soft top separator */}
       <View style={styles.separator} />
-
       <BlurView
-        intensity={Platform.OS === 'ios' ? 60 : 0}
-        style={styles.blurContainer}
+        intensity={Platform.OS === 'ios' ? 55 : 0}
+        style={styles.blurWrap}
       >
-        <View
-          style={[
-            styles.tabBar,
-            Platform.OS !== 'ios' && styles.tabBarAndroid,
-          ]}
-        >
-          {/* Animated dot indicator */}
-          <Animated.View style={[styles.indicator, indicatorStyle]} />
+        <View style={[styles.tabBar, Platform.OS !== 'ios' && styles.tabBarSolid]}>
+          {/* Sliding teal indicator dot */}
+          <Animated.View
+            style={[styles.indicator, { transform: [{ translateX: indicatorX }] }]}
+          />
 
           {tabs.map((tab, index) => {
             if (tab.special) {
               return (
                 <TouchableOpacity
                   key={index}
-                  style={styles.specialTabItem}
+                  style={styles.specialItem}
                   onPress={() => router.push(tab.route)}
-                  activeOpacity={0.85}
+                  activeOpacity={0.82}
                 >
-                  <Animated.View style={scanAnimStyle}>
+                  <Animated.View style={{ transform: [{ scale: scanScale }] }}>
                     <LinearGradient
                       colors={['#FFD4C4', '#FFB8A3']}
                       style={styles.specialBtn}
@@ -161,12 +143,7 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
                   size={23}
                   color={isActive ? TEAL : INACTIVE}
                 />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    isActive && styles.tabLabelActive,
-                  ]}
-                >
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -188,25 +165,24 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: 'rgba(126,206,206,0.18)',
+    backgroundColor: 'rgba(126,206,206,0.2)',
   },
-  blurContainer: {
+  blurWrap: {
     overflow: 'visible',
   },
   tabBar: {
     flexDirection: 'row',
     height: 58,
     alignItems: 'center',
-    backgroundColor: 'rgba(244,254,254,0.92)',
+    backgroundColor: 'rgba(244,254,254,0.88)',
     overflow: 'visible',
   },
-  tabBarAndroid: {
+  tabBarSolid: {
     backgroundColor: 'rgba(244,254,254,0.97)',
   },
-  // Tiny animated active dot indicator above the icon
   indicator: {
     position: 'absolute',
-    top: 6,
+    top: 5,
     width: 28,
     height: 3,
     borderRadius: 2,
@@ -228,8 +204,7 @@ const styles = StyleSheet.create({
     color: TEAL,
     fontWeight: '600',
   },
-  // Special center Scan button
-  specialTabItem: {
+  specialItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -243,7 +218,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 1,
-    shadowColor: 'rgba(255,184,163,0.5)',
+    shadowColor: 'rgba(255,184,163,0.55)',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 1,
     shadowRadius: 12,
