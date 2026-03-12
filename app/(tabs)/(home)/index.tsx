@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,301 +10,374 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSpring,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SLIDE_WIDTH = SCREEN_WIDTH - 48;
 
+// ── Palette ──────────────────────────────────────────────────────────────────
+const C = {
+  bg: '#F4FEFE',
+  card: '#FFFFFF',
+  teal: '#7ECECE',
+  tealLight: '#B5EAEA',
+  tealExtraLight: '#E4F9F9',
+  peach: '#FFB8A3',
+  peachLight: '#FFE3DA',
+  lavender: '#C4B5FD',
+  lavenderLight: '#EDE9FE',
+  sage: '#9DC8AC',
+  sageLight: '#D4EDD9',
+  textDark: '#1E3A3A',
+  textMid: '#5A8080',
+  textLight: '#9ABABA',
+  border: '#E4F2F2',
+  shadow: 'rgba(126,206,206,0.12)',
+  // Gradient stops
+  headerGrad: ['#CBF0F0', '#8ED3D3'] as const,
+  mintGrad: ['#B5EDD5', '#78CCA4'] as const,
+  skyGrad: ['#BAD8FA', '#80BAEC'] as const,
+  lavGrad: ['#DDD6FE', '#C4B5FD'] as const,
+  peachGrad: ['#FFD4C4', '#FFB8A3'] as const,
+};
+
 const CAROUSEL_SLIDES = [
   {
-    badgeNumber: 1,
-    text: 'Upload photos and track it at the History Screen.',
+    badge: 1,
+    text: 'Upload photos and track changes at the History Screen.',
   },
   {
-    badgeNumber: 2,
-    text: 'Get AI-powered analysis of your skin condition.',
+    badge: 2,
+    text: 'Get gentle AI-powered analysis of your skin condition.',
   },
   {
-    badgeNumber: 3,
-    text: 'Monitor changes and consult a dermatologist.',
+    badge: 3,
+    text: 'Monitor changes over time with care and precision.',
   },
 ];
 
-function BodyScanSlide({
-  badgeNumber,
-  text,
+// ── Animated fade-slide block ─────────────────────────────────────────────────
+function FadeSlideIn({
+  children,
+  delay = 0,
+  style,
 }: {
-  badgeNumber: number;
-  text: string;
+  children: React.ReactNode;
+  delay?: number;
+  style?: object;
 }) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(18);
+
+  useEffect(() => {
+    opacity.value = withDelay(
+      delay,
+      withTiming(1, { duration: 540, easing: Easing.out(Easing.quad) })
+    );
+    translateY.value = withDelay(
+      delay,
+      withTiming(0, { duration: 480, easing: Easing.out(Easing.cubic) })
+    );
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
+
+// ── Carousel slide ────────────────────────────────────────────────────────────
+function BodyScanSlide({ badge, text }: { badge: number; text: string }) {
   return (
-    <View style={styles.carouselSlide}>
-      {/* Body scan visualization */}
-      <View style={styles.bodyScanArea}>
-        {/* Background figure */}
-        <View style={[styles.figureSilhouette, styles.figureBack]}>
-          <MaterialIcons name="person" size={180} color="rgba(90,130,200,0.18)" />
+    <View style={styles.slide}>
+      {/* Scan illustration area */}
+      <LinearGradient
+        colors={['#E4F9F9', '#C8EEEE']}
+        style={styles.slideImageArea}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Back body figure */}
+        <View style={styles.figureBack}>
+          <MaterialIcons name="person" size={175} color="rgba(126,206,206,0.2)" />
         </View>
-        {/* Front figure */}
-        <View style={[styles.figureSilhouette, styles.figureFront]}>
-          <MaterialIcons name="person" size={160} color="rgba(195,145,90,0.75)" />
+        {/* Front body figure */}
+        <View style={styles.figureFront}>
+          <MaterialIcons name="person" size={155} color="rgba(195,155,110,0.6)" />
         </View>
 
-        {/* Scan square with bracket corners */}
-        <View style={styles.scanSquareWrapper}>
-          <View style={styles.scanSquare}>
+        {/* Scan square */}
+        <View style={styles.scanSquareWrap}>
+          <LinearGradient
+            colors={['#F5D9BE', '#E8C4A0']}
+            style={styles.scanSquare}
+          >
             {/* Corner brackets */}
-            <View style={[styles.cornerBracket, { top: -1, left: -1 }]}>
-              <View style={[styles.bracketArm, styles.bracketTop]} />
-              <View style={[styles.bracketArm, styles.bracketLeft]} />
-            </View>
-            <View style={[styles.cornerBracket, { top: -1, right: -1, alignItems: 'flex-end' }]}>
-              <View style={[styles.bracketArm, styles.bracketTop]} />
-              <View style={[styles.bracketArm, styles.bracketRight]} />
-            </View>
-            <View
-              style={[
-                styles.cornerBracket,
-                { bottom: -1, left: -1, justifyContent: 'flex-end' },
-              ]}
-            >
-              <View style={[styles.bracketArm, styles.bracketLeft]} />
-              <View style={[styles.bracketArm, styles.bracketBottom]} />
-            </View>
-            <View
-              style={[
-                styles.cornerBracket,
-                {
-                  bottom: -1,
-                  right: -1,
-                  justifyContent: 'flex-end',
-                  alignItems: 'flex-end',
-                },
-              ]}
-            >
-              <View style={[styles.bracketArm, styles.bracketRight]} />
-              <View style={[styles.bracketArm, styles.bracketBottom]} />
-            </View>
-
-            {/* Mole dot */}
-            <View style={styles.moleDot} />
-          </View>
+            {(['TL', 'TR', 'BL', 'BR'] as const).map((pos) => (
+              <View key={pos} style={[styles.bracket, styles[`bracket${pos}`]]}>
+                <View
+                  style={[
+                    styles.bracketH,
+                    (pos === 'TR' || pos === 'BR') && { alignSelf: 'flex-end' },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.bracketV,
+                    (pos === 'TR' || pos === 'BR') && { alignSelf: 'flex-end' },
+                  ]}
+                />
+              </View>
+            ))}
+            {/* Mole */}
+            <View style={styles.mole} />
+          </LinearGradient>
 
           {/* Badge */}
-          <View style={styles.scanBadge}>
-            <Text style={styles.scanBadgeText}>{badgeNumber}</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* Slide bottom text */}
+      {/* Slide footer */}
       <View style={styles.slideFooter}>
         <Text style={styles.slideFooterText}>{text}</Text>
-        <TouchableOpacity style={styles.slideArrowBtn}>
-          <MaterialIcons name="chevron-right" size={22} color="#1A56B0" />
-        </TouchableOpacity>
+        <View style={styles.slideArrow}>
+          <MaterialIcons name="chevron-right" size={20} color={C.teal} />
+        </View>
       </View>
     </View>
   );
 }
 
+// ── Main Screen ───────────────────────────────────────────────────────────────
 export default function HomeScreen() {
-  const router = useRouter();
   const [activeSlide, setActiveSlide] = useState(0);
   const carouselRef = useRef<ScrollView>(null);
 
-  const handleCarouselScroll = (
-    event: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const x = event.nativeEvent.contentOffset.x;
-    const index = Math.round(x / SLIDE_WIDTH);
-    if (index !== activeSlide) {
-      setActiveSlide(Math.max(0, Math.min(index, CAROUSEL_SLIDES.length - 1)));
+  // Animated dot widths
+  const dotWidths = CAROUSEL_SLIDES.map(() => useSharedValue(8));
+
+  useEffect(() => {
+    CAROUSEL_SLIDES.forEach((_, i) => {
+      dotWidths[i].value = withSpring(i === 0 ? 22 : 8, {
+        damping: 18,
+        stiffness: 160,
+      });
+    });
+  }, []);
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH);
+    const clamped = Math.max(0, Math.min(idx, CAROUSEL_SLIDES.length - 1));
+    if (clamped !== activeSlide) {
+      setActiveSlide(clamped);
+      CAROUSEL_SLIDES.forEach((_, i) => {
+        dotWidths[i].value = withSpring(i === clamped ? 22 : 8, {
+          damping: 18,
+          stiffness: 160,
+        });
+      });
     }
   };
 
   return (
     <View style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.pageContent}
         >
-          {/* ── DARK BLUE HEADER SECTION ── */}
+          {/* ── SOFT TEAL HEADER ─────────────────────────────────────── */}
           <LinearGradient
-            colors={['#0A2463', '#1A56B0']}
-            style={styles.headerGradient}
-            start={{ x: 0.1, y: 0 }}
+            colors={C.headerGrad}
+            style={styles.header}
+            start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.headerSub}>Your Personal</Text>
-            <Text style={styles.headerTitle}>AI Dermatologist</Text>
+            <FadeSlideIn delay={0}>
+              <Text style={styles.headerSub}>Your Personal</Text>
+              <Text style={styles.headerTitle}>AI Dermatologist</Text>
+            </FadeSlideIn>
 
             {/* Carousel */}
-            <ScrollView
-              ref={carouselRef}
-              horizontal
-              snapToInterval={SLIDE_WIDTH + 12}
-              decelerationRate="fast"
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleCarouselScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={styles.carouselList}
-            >
-              {CAROUSEL_SLIDES.map((slide, i) => (
-                <BodyScanSlide
-                  key={i}
-                  badgeNumber={slide.badgeNumber}
-                  text={slide.text}
-                />
-              ))}
-            </ScrollView>
+            <FadeSlideIn delay={120}>
+              <ScrollView
+                ref={carouselRef}
+                horizontal
+                snapToInterval={SLIDE_WIDTH + 12}
+                decelerationRate="fast"
+                showsHorizontalScrollIndicator={false}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                contentContainerStyle={styles.carouselList}
+              >
+                {CAROUSEL_SLIDES.map((s, i) => (
+                  <BodyScanSlide key={i} badge={s.badge} text={s.text} />
+                ))}
+              </ScrollView>
+            </FadeSlideIn>
 
-            {/* Dots indicator */}
+            {/* Animated dots */}
             <View style={styles.dotsRow}>
-              {CAROUSEL_SLIDES.map((_, i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i === activeSlide ? styles.dotActive : styles.dotInactive]}
-                />
-              ))}
+              {dotWidths.map((w, i) => {
+                const dotStyle = useAnimatedStyle(() => ({
+                  width: w.value,
+                  backgroundColor:
+                    i === activeSlide
+                      ? C.teal
+                      : 'rgba(126,206,206,0.35)',
+                }));
+                return (
+                  <Animated.View key={i} style={[styles.dot, dotStyle]} />
+                );
+              })}
             </View>
           </LinearGradient>
 
-          {/* ── WHITE CONTENT SECTION ── */}
-          <View style={styles.whiteSection}>
+          {/* ── CONTENT ─────────────────────────────────────────────── */}
+          <View style={styles.body}>
 
             {/* Early Detection */}
-            <Text style={styles.sectionHeading}>
-              {'Early Detection\nMakes a Difference'}
-            </Text>
+            <FadeSlideIn delay={200}>
+              <Text style={styles.sectionHeading}>
+                {'Early Detection\nMakes a Difference'}
+              </Text>
+            </FadeSlideIn>
 
-            {/* "Every skin change" promo card */}
-            <LinearGradient
-              colors={['#00B4B4', '#007070']}
-              style={styles.promoCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.promoCardBody}>
-                <Text style={styles.promoCardText}>
+            {/* Promo card — every skin change */}
+            <FadeSlideIn delay={280}>
+              <LinearGradient
+                colors={C.mintGrad}
+                style={styles.promoCard}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.promoText}>
                   {'Every skin change\ndeserves attention.'}
                 </Text>
-                <View style={styles.doctorIconWrap}>
-                  <View style={styles.doctorCircle}>
-                    <MaterialIcons name="person" size={36} color="#00B4B4" />
-                  </View>
-                  <View style={styles.stethoscopeTag}>
-                    <MaterialIcons name="medical-services" size={14} color="#FFFFFF" />
+                <View style={styles.doctorBubble}>
+                  <MaterialIcons name="person" size={34} color={C.sage} />
+                  <View style={styles.stethTag}>
+                    <MaterialIcons name="medical-services" size={12} color="#fff" />
                   </View>
                 </View>
-              </View>
-            </LinearGradient>
+              </LinearGradient>
+            </FadeSlideIn>
 
-            {/* "Are You at Risk?" promo card */}
-            <LinearGradient
-              colors={['#00B4B4', '#007070']}
-              style={styles.riskCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.riskCardBody}>
-                <View style={styles.riskCardLeft}>
+            {/* Risk card */}
+            <FadeSlideIn delay={340}>
+              <LinearGradient
+                colors={C.skyGrad}
+                style={styles.riskCard}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <View style={{ flex: 1 }}>
                   <Text style={styles.riskTitle}>Are You at Risk?</Text>
-                  <Text style={styles.riskSubtitle}>
+                  <Text style={styles.riskSub}>
                     1 minute. Could save your life.
                   </Text>
                 </View>
-                <View style={styles.questionMarksContainer}>
-                  <Text style={styles.questionMarkLarge}>?</Text>
-                  <Text style={styles.questionMarkSmall}>?</Text>
-                  <Text style={[styles.questionMarkSmall, { top: 18, left: 20 }]}>?</Text>
+                <View style={styles.riskQMarks}>
+                  <Text style={styles.qLarge}>?</Text>
+                  <Text style={[styles.qSmall, { top: 4, left: 18 }]}>?</Text>
+                  <Text style={[styles.qSmall, { top: 20, left: 4 }]}>?</Text>
                 </View>
-              </View>
-            </LinearGradient>
+              </LinearGradient>
+            </FadeSlideIn>
 
-            {/* Your last Scanning */}
-            <Text style={styles.sectionTitle}>Your last Scanning</Text>
-            <View style={styles.scanHistoryRow}>
-              <View style={styles.scanImageCard}>
-                <View style={styles.scanImagePlaceholder}>
-                  <MaterialIcons name="photo" size={36} color="#B0C4D8" />
+            {/* Last scanning */}
+            <FadeSlideIn delay={400}>
+              <Text style={styles.sectionTitle}>Your last Scanning</Text>
+              <View style={styles.scanRow}>
+                <View style={styles.scanCard}>
+                  <LinearGradient
+                    colors={['#E4F4F4', '#C8EEEE']}
+                    style={styles.scanPlaceholder}
+                  >
+                    <MaterialIcons name="photo" size={34} color={C.tealLight} />
+                  </LinearGradient>
+                  <Text style={styles.scanDate}>March 12, 2026</Text>
                 </View>
-                <Text style={styles.scanDateText}>March 12, 2026</Text>
               </View>
-            </View>
+            </FadeSlideIn>
 
             {/* Tip card */}
-            <View style={styles.tipCard}>
-              <MaterialIcons
-                name="info"
-                size={20}
-                color="#D97706"
-                style={{ marginTop: 1 }}
-              />
-              <Text style={styles.tipText}>
-                <Text style={styles.tipBold}>Tip: </Text>
-                To ensure accurate results, take 3 PHOTOS of the same area of
-                concern in a row.
-              </Text>
-            </View>
+            <FadeSlideIn delay={460}>
+              <View style={styles.tipCard}>
+                <View style={styles.tipIconWrap}>
+                  <MaterialIcons name="info" size={18} color={C.peach} />
+                </View>
+                <Text style={styles.tipText}>
+                  <Text style={styles.tipBold}>Tip: </Text>
+                  Take 3 photos of the same area in a row for the most accurate results.
+                </Text>
+              </View>
+            </FadeSlideIn>
 
             {/* Stats card */}
-            <View style={styles.statsCard}>
-              {/* Circular ring */}
-              <View style={styles.statsRingWrap}>
-                <View style={styles.statsRingOuter}>
-                  <View style={styles.statsRingInner}>
-                    <Text style={styles.statsRingNumber}>1</Text>
+            <FadeSlideIn delay={520}>
+              <View style={styles.statsCard}>
+                <View style={styles.ringWrap}>
+                  <View style={styles.ringOuter}>
+                    <View style={styles.ringInner}>
+                      <Text style={styles.ringNum}>1</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-
-              {/* Stats list */}
-              <View style={styles.statsListWrap}>
-                <View style={styles.statsRow}>
-                  <View style={[styles.statsDot, { backgroundColor: '#C8D4E0' }]} />
-                  <Text style={styles.statsLabel}>Photos uploaded</Text>
-                  <Text style={styles.statsValue}>1</Text>
-                </View>
-                <View style={styles.statsRow}>
-                  <View style={[styles.statsDot, { backgroundColor: '#1A56B0' }]} />
-                  <Text style={styles.statsLabel}>Without problems</Text>
-                  <Text style={styles.statsValue}>1</Text>
-                </View>
-                <View style={styles.statsRow}>
-                  <View style={[styles.statsDot, { backgroundColor: '#E53E3E' }]} />
-                  <Text style={styles.statsLabel}>Diagnosed problems</Text>
-                  <Text style={styles.statsValue}>0</Text>
+                <View style={styles.statsList}>
+                  {[
+                    { color: C.tealLight, label: 'Photos uploaded', val: '1' },
+                    { color: C.teal, label: 'Without problems', val: '1' },
+                    { color: C.peach, label: 'Diagnosed problems', val: '0' },
+                  ].map((item, i) => (
+                    <View key={i} style={styles.statsRow}>
+                      <View style={[styles.statsDot, { backgroundColor: item.color }]} />
+                      <Text style={styles.statsLabel}>{item.label}</Text>
+                      <Text style={styles.statsVal}>{item.val}</Text>
+                    </View>
+                  ))}
                 </View>
               </View>
-            </View>
+            </FadeSlideIn>
 
-            {/* Set Up Notification card */}
-            <LinearGradient
-              colors={['#1A56B0', '#0A2463']}
-              style={styles.notifCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.notifCardBody}>
-                <View style={styles.notifTextWrap}>
+            {/* Notification card */}
+            <FadeSlideIn delay={580}>
+              <LinearGradient
+                colors={C.lavGrad}
+                style={styles.notifCard}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={{ flex: 1 }}>
                   <Text style={styles.notifTitle}>Set Up Notification</Text>
-                  <Text style={styles.notifSubtitle}>
-                    {'Do not forget to keep track\nof your skin conditions'}
+                  <Text style={styles.notifSub}>
+                    {'Keep track of your\nskin conditions gently.'}
                   </Text>
                 </View>
                 <View style={styles.bellWrap}>
-                  <Text style={styles.bellEmoji}>🔔</Text>
+                  <Text style={styles.bell}>🔔</Text>
                   <View style={styles.bellBadge}>
                     <Text style={styles.bellBadgeText}>1</Text>
                   </View>
                 </View>
-              </View>
-            </LinearGradient>
+              </LinearGradient>
+            </FadeSlideIn>
 
             <View style={{ height: 110 }} />
           </View>
@@ -314,168 +387,143 @@ export default function HomeScreen() {
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A2463',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  pageContent: {
-    flexGrow: 1,
-  },
+  container: { flex: 1, backgroundColor: C.bg },
+  pageContent: { flexGrow: 1 },
 
-  // ── Header ──
-  headerGradient: {
-    paddingTop: 24,
+  // Header
+  header: {
+    paddingTop: 22,
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingBottom: 22,
   },
   headerSub: {
-    fontSize: 20,
-    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: '400',
+    color: C.textMid,
     marginBottom: 2,
+    letterSpacing: 0.3,
   },
   headerTitle: {
-    fontSize: 28,
-    color: '#FFFFFF',
+    fontSize: 26,
     fontWeight: '800',
+    color: C.textDark,
     marginBottom: 20,
+    letterSpacing: -0.3,
   },
 
-  // ── Carousel ──
-  carouselList: {
-    gap: 12,
-    paddingRight: 24,
-  },
-  carouselSlide: {
+  // Carousel
+  carouselList: { gap: 12, paddingRight: 24 },
+  slide: {
     width: SLIDE_WIDTH,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: C.card,
+    borderRadius: 22,
     overflow: 'hidden',
+    shadowColor: C.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 4,
   },
-
-  // Body scan visualization
-  bodyScanArea: {
-    height: 220,
-    backgroundColor: '#C8DDEF',
+  slideImageArea: {
+    height: 210,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  figureSilhouette: {
-    position: 'absolute',
-  },
   figureBack: {
-    left: '10%',
-    bottom: -10,
+    position: 'absolute',
+    left: '8%',
+    bottom: -8,
   },
   figureFront: {
-    left: '30%',
-    bottom: -10,
-  },
-
-  // Scan square with corner brackets
-  scanSquareWrapper: {
     position: 'absolute',
-    width: 100,
-    height: 100,
-    top: '30%',
-    left: '40%',
+    left: '28%',
+    bottom: -8,
+  },
+  scanSquareWrap: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    top: '28%',
+    left: '42%',
   },
   scanSquare: {
-    width: 100,
-    height: 100,
-    backgroundColor: 'rgba(210,165,110,0.85)',
-    borderRadius: 6,
+    width: 96,
+    height: 96,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cornerBracket: {
-    position: 'absolute',
-    width: 18,
-    height: 18,
-  },
-  bracketArm: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 1,
-  },
-  bracketTop: {
-    width: 18,
-    height: 3,
-    top: 0,
-    left: 0,
-  },
-  bracketLeft: {
-    width: 3,
-    height: 18,
-    top: 0,
-    left: 0,
-  },
-  bracketRight: {
-    width: 3,
-    height: 18,
-    top: 0,
-    right: 0,
-  },
-  bracketBottom: {
-    width: 18,
-    height: 3,
-    bottom: 0,
-    left: 0,
-  },
-  moleDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#3D2B1A',
-  },
-  scanBadge: {
-    position: 'absolute',
-    top: -10,
-    right: -10,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  scanBadgeText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#E53E3E',
   },
 
-  // Slide footer
+  // Corner brackets
+  bracket: { position: 'absolute', width: 16, height: 16 },
+  bracketTL: { top: -2, left: -2 },
+  bracketTR: { top: -2, right: -2 },
+  bracketBL: { bottom: -2, left: -2 },
+  bracketBR: { bottom: -2, right: -2 },
+  bracketH: {
+    width: 16,
+    height: 2.5,
+    backgroundColor: C.card,
+    borderRadius: 1.5,
+  },
+  bracketV: {
+    width: 2.5,
+    height: 16,
+    backgroundColor: C.card,
+    borderRadius: 1.5,
+    marginTop: -2.5,
+  },
+
+  mole: {
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: '#5C3A1E',
+    opacity: 0.7,
+  },
+  badge: {
+    position: 'absolute',
+    top: -9,
+    right: -9,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: C.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.teal,
+  },
   slideFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    gap: 8,
+    padding: 14,
+    gap: 10,
+    backgroundColor: C.card,
   },
   slideFooterText: {
     flex: 1,
-    fontSize: 14,
-    color: '#2D3748',
-    fontWeight: '500',
-    lineHeight: 20,
+    fontSize: 13,
+    color: C.textMid,
+    lineHeight: 19,
   },
-  slideArrowBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  slideArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#1A56B0',
+    borderColor: C.tealLight,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -485,296 +533,218 @@ const styles = StyleSheet.create({
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 14,
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
   },
   dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  dotActive: {
-    backgroundColor: '#FFFFFF',
-    width: 10,
-    height: 10,
-  },
-  dotInactive: {
-    backgroundColor: 'rgba(255,255,255,0)',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    height: 8,
+    borderRadius: 4,
   },
 
-  // ── White section ──
-  whiteSection: {
-    flex: 1,
-    backgroundColor: '#F0F4FA',
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
+  // Body
+  body: {
+    backgroundColor: C.bg,
     paddingHorizontal: 20,
     paddingTop: 24,
   },
   sectionHeading: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '800',
-    color: '#1A2340',
-    marginBottom: 16,
-    lineHeight: 30,
+    color: C.textDark,
+    marginBottom: 18,
+    lineHeight: 29,
+    letterSpacing: -0.2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#1A2340',
-    marginTop: 20,
+    color: C.textDark,
+    marginTop: 22,
     marginBottom: 12,
   },
 
-  // Promo cards
+  // Promo card
   promoCard: {
-    borderRadius: 16,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  promoCardBody: {
+    borderRadius: 18,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
+    marginBottom: 12,
   },
-  promoCardText: {
-    fontSize: 17,
+  promoText: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    lineHeight: 24,
-    flex: 1,
+    lineHeight: 23,
   },
-  doctorIconWrap: {
-    position: 'relative',
-    width: 56,
-    height: 56,
-    marginLeft: 12,
-  },
-  doctorCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+  doctorBubble: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(255,255,255,0.88)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
+    position: 'relative',
   },
-  stethoscopeTag: {
+  stethTag: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#005050',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: C.sage,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // Risk card
   riskCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  riskCardBody: {
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  riskCardLeft: {
-    flex: 1,
-  },
-  riskTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
-  riskSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
+  riskTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 3,
   },
-  questionMarksContainer: {
-    width: 48,
-    height: 48,
-    position: 'relative',
-  },
-  questionMarkLarge: {
+  riskSub: { fontSize: 12.5, color: 'rgba(255,255,255,0.9)' },
+  riskQMarks: { width: 42, height: 42, position: 'relative' },
+  qLarge: {
     position: 'absolute',
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '900',
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.85)',
     top: 0,
     left: 0,
   },
-  questionMarkSmall: {
+  qSmall: {
     position: 'absolute',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.7)',
-    top: 6,
-    left: 24,
+    color: 'rgba(255,255,255,0.65)',
   },
 
   // Scan history
-  scanHistoryRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  scanImageCard: {
-    alignItems: 'center',
-  },
-  scanImagePlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: 12,
-    backgroundColor: '#D9E8F4',
+  scanRow: { flexDirection: 'row', gap: 12 },
+  scanCard: { alignItems: 'center' },
+  scanPlaceholder: {
+    width: 108,
+    height: 108,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
-  scanDateText: {
-    fontSize: 12,
-    color: '#718096',
-  },
+  scanDate: { fontSize: 12, color: C.textLight },
 
   // Tip card
   tipCard: {
     flexDirection: 'row',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 14,
+    backgroundColor: '#FFF5EE',
+    borderRadius: 16,
     padding: 14,
     marginTop: 16,
     gap: 10,
     alignItems: 'flex-start',
     borderLeftWidth: 3,
-    borderLeftColor: '#D97706',
+    borderLeftColor: C.peach,
+  },
+  tipIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.peachLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   tipText: {
     flex: 1,
     fontSize: 13,
-    color: '#92400E',
+    color: '#8B5740',
     lineHeight: 19,
   },
-  tipBold: {
-    fontWeight: '700',
-  },
+  tipBold: { fontWeight: '700' },
 
   // Stats card
   statsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: C.card,
+    borderRadius: 20,
     padding: 18,
     marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: 'rgba(0,0,0,0.06)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
     gap: 16,
+    shadowColor: C.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  statsRingWrap: {
+  ringWrap: { alignItems: 'center', justifyContent: 'center' },
+  ringOuter: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    borderWidth: 5,
+    borderColor: C.tealLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statsRingOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 6,
-    borderColor: '#1A56B0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsRingInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsRingNumber: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A2340',
-  },
-  statsListWrap: {
-    flex: 1,
-    gap: 10,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  ringInner: { alignItems: 'center' },
+  ringNum: { fontSize: 26, fontWeight: '700', color: C.textDark },
+  statsList: { flex: 1, gap: 9 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statsDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 5,
     flexShrink: 0,
   },
-  statsLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: '#4A5568',
-  },
-  statsValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A2340',
-  },
+  statsLabel: { flex: 1, fontSize: 12.5, color: C.textMid },
+  statsVal: { fontSize: 13, fontWeight: '700', color: C.textDark },
 
   // Notification card
   notifCard: {
-    borderRadius: 16,
+    borderRadius: 20,
+    padding: 20,
     marginTop: 16,
-    overflow: 'hidden',
-  },
-  notifCardBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-  },
-  notifTextWrap: {
-    flex: 1,
+    overflow: 'hidden',
   },
   notifTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 6,
+    color: '#3D2E7C',
+    marginBottom: 5,
   },
-  notifSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 19,
+  notifSub: {
+    fontSize: 12.5,
+    color: 'rgba(61,46,124,0.75)',
+    lineHeight: 18,
   },
-  bellWrap: {
-    position: 'relative',
-    marginLeft: 12,
-  },
-  bellEmoji: {
-    fontSize: 44,
-  },
+  bellWrap: { position: 'relative', marginLeft: 10 },
+  bell: { fontSize: 42 },
   bellBadge: {
     position: 'absolute',
     top: -2,
     right: -2,
-    width: 18,
-    height: 18,
+    width: 17,
+    height: 17,
     borderRadius: 9,
-    backgroundColor: '#E53E3E',
+    backgroundColor: C.peach,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bellBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  bellBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
 });
