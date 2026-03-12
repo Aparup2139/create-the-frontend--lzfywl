@@ -1,239 +1,471 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
+  Switch,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-export default function ProfileScreen() {
-  const handleNotificationPress = () => {
-    console.log('User tapped Notifications setting');
-  };
+// ── Types ────────────────────────────────────────────
+type SettingRowProps =
+  | {
+      icon: keyof typeof MaterialIcons.glyphMap;
+      label: string;
+      rightValue?: string;
+      hasChevron?: true;
+      hasToggle?: never;
+      toggleValue?: never;
+      onToggle?: never;
+      onPress?: () => void;
+    }
+  | {
+      icon: keyof typeof MaterialIcons.glyphMap;
+      label: string;
+      rightValue?: never;
+      hasChevron?: never;
+      hasToggle: true;
+      toggleValue: boolean;
+      onToggle: (v: boolean) => void;
+      onPress?: never;
+    };
 
-  const handlePrivacyPress = () => {
-    console.log('User tapped Privacy setting');
-  };
-
-  const handleHelpPress = () => {
-    console.log('User tapped Help & Support');
-  };
-
+function SettingRow({
+  icon,
+  label,
+  rightValue,
+  hasChevron = true,
+  hasToggle,
+  toggleValue,
+  onToggle,
+  onPress,
+}: SettingRowProps) {
   return (
-    <View style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
+    <TouchableOpacity
+      style={styles.settingRow}
+      onPress={onPress}
+      activeOpacity={hasToggle ? 1 : 0.7}
+    >
+      <View style={styles.settingIconWrap}>
+        <MaterialIcons name={icon} size={20} color="#6B82A8" />
+      </View>
+      <Text style={styles.settingLabel}>{label}</Text>
+      {hasToggle ? (
+        <Switch
+          value={toggleValue}
+          onValueChange={onToggle}
+          trackColor={{ false: '#D0D5DD', true: '#34C759' }}
+          thumbColor="#FFFFFF"
+        />
+      ) : (
+        <View style={styles.settingRight}>
+          {rightValue ? (
+            <Text style={styles.settingRightValue}>{rightValue}</Text>
+          ) : null}
+          {hasChevron && (
+            <MaterialIcons name="chevron-right" size={20} color="#94A3B8" />
+          )}
         </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile Header */}
-          <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
-              <IconSymbol
-                ios_icon_name="person.fill"
-                android_material_icon_name="person"
-                size={48}
-                color={colors.primary}
-              />
-            </View>
-            <Text style={styles.profileName}>User Name</Text>
-            <Text style={styles.profileEmail}>user@example.com</Text>
-          </View>
-
-          {/* User Info */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Age</Text>
-                <Text style={styles.infoValue}>25 years</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Gender</Text>
-                <Text style={styles.infoValue}>Male</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Skin Type</Text>
-                <Text style={styles.infoValue}>Combination</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Settings</Text>
-            <TouchableOpacity style={styles.settingCard} onPress={handleNotificationPress}>
-              <IconSymbol
-                ios_icon_name="bell.fill"
-                android_material_icon_name="notifications"
-                size={24}
-                color={colors.primary}
-              />
-              <Text style={styles.settingText}>Notifications</Text>
-              <IconSymbol
-                ios_icon_name="chevron.right"
-                android_material_icon_name="arrow-forward"
-                size={20}
-                color={colors.textLight}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.settingCard} onPress={handlePrivacyPress}>
-              <IconSymbol
-                ios_icon_name="lock.fill"
-                android_material_icon_name="lock"
-                size={24}
-                color={colors.primary}
-              />
-              <Text style={styles.settingText}>Privacy</Text>
-              <IconSymbol
-                ios_icon_name="chevron.right"
-                android_material_icon_name="arrow-forward"
-                size={20}
-                color={colors.textLight}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.settingCard} onPress={handleHelpPress}>
-              <IconSymbol
-                ios_icon_name="questionmark.circle.fill"
-                android_material_icon_name="help"
-                size={24}
-                color={colors.primary}
-              />
-              <Text style={styles.settingText}>Help & Support</Text>
-              <IconSymbol
-                ios_icon_name="chevron.right"
-                android_material_icon_name="arrow-forward"
-                size={20}
-                color={colors.textLight}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <View style={{ height: 100 }} />
-        </ScrollView>
-      </SafeAreaView>
+function PlanInfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof MaterialIcons.glyphMap;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <View style={styles.planRow}>
+      <View style={styles.planRowIconWrap}>
+        <MaterialIcons name={icon} size={18} color="#6B82A8" />
+      </View>
+      <Text style={styles.planRowLabel}>{label}</Text>
+      <Text style={styles.planRowValue}>{value}</Text>
     </View>
   );
 }
 
+// ── Screen ───────────────────────────────────────────
+export default function ProfileScreen() {
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  return (
+    <View style={styles.container}>
+      {/* Dark blue gradient header */}
+      <LinearGradient
+        colors={['#0A2463', '#1A56B0']}
+        style={styles.headerGradient}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView edges={['top']}>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+        </SafeAreaView>
+      </LinearGradient>
+
+      {/* ── Scrollable body ── */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Account / Premium banner */}
+        <LinearGradient
+          colors={['#1A56B0', '#0A2463']}
+          style={styles.accountBanner}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View>
+            <Text style={styles.accountBannerTitle}>Account</Text>
+            <Text style={styles.accountBannerSub}>
+              Choose the best plan{'\n'}for you.
+            </Text>
+          </View>
+          <Text style={styles.starEmoji}>⭐</Text>
+        </LinearGradient>
+
+        {/* Current plan card */}
+        <View style={styles.planCard}>
+          <Text style={styles.planCardTitle}>Your current plan</Text>
+          <View style={styles.planRowsContainer}>
+            <PlanInfoRow icon="star-outline" label="Plan" value="Free" />
+            <View style={styles.planDivider} />
+            <PlanInfoRow icon="photo-library" label="Number of photos" value={0} />
+            <View style={styles.planDivider} />
+            <PlanInfoRow icon="check-box-outline-blank" label="Photos left" value={0} />
+          </View>
+        </View>
+
+        {/* Add to plan button */}
+        <TouchableOpacity style={styles.addPlanBtn} activeOpacity={0.85}>
+          <Text style={styles.addPlanBtnText}>Add to your plan</Text>
+        </TouchableOpacity>
+
+        {/* Get Premium banner */}
+        <LinearGradient
+          colors={['#1A56B0', '#0A2463']}
+          style={styles.premiumBanner}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.premiumBannerContent}>
+            <View>
+              <Text style={styles.premiumBannerTitle}>
+                {'Get Premium\nAccount'}
+              </Text>
+              <Text style={styles.premiumBannerSub}>
+                Choose the best plan{'\n'}for you.
+              </Text>
+            </View>
+            <Text style={styles.premiumStarEmoji}>⭐</Text>
+          </View>
+        </LinearGradient>
+
+        {/* Disclaimer card */}
+        <View style={styles.disclaimerCard}>
+          <MaterialIcons
+            name="info"
+            size={20}
+            color="#D97706"
+            style={{ marginTop: 1 }}
+          />
+          <Text style={styles.disclaimerText}>
+            <Text style={styles.disclaimerBold}>Not a medical device. </Text>
+            For educational and self-assessment purposes only. Consult a
+            dermatologist for any concerns.
+          </Text>
+        </View>
+
+        {/* Settings section */}
+        <Text style={styles.settingsSectionTitle}>Settings</Text>
+
+        <View style={styles.settingsCard}>
+          <SettingRow
+            icon="transgender"
+            label="Gender"
+            rightValue="Male"
+            hasChevron
+          />
+          <View style={styles.settingDivider} />
+          <SettingRow
+            icon="grain"
+            label="Skin type"
+            hasChevron
+          />
+          <View style={styles.settingDivider} />
+          <SettingRow
+            icon="warning-amber"
+            label="Skin Risk Detector"
+            hasChevron
+          />
+          <View style={styles.settingDivider} />
+          <SettingRow
+            icon="notifications-none"
+            label="Notifications"
+            hasToggle
+            toggleValue={notificationsEnabled}
+            onToggle={setNotificationsEnabled}
+          />
+          <View style={styles.settingDivider} />
+          <SettingRow
+            icon="description"
+            label="Terms and conditions"
+            hasChevron
+          />
+          <View style={styles.settingDivider} />
+          <SettingRow
+            icon="security"
+            label="Privacy policy"
+            hasChevron
+          />
+          <View style={styles.settingDivider} />
+          <SettingRow
+            icon="shield"
+            label="Privacy settings"
+            hasChevron
+          />
+        </View>
+
+        <View style={{ height: 110 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F0F4FA',
   },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
+
+  // Header
+  headerGradient: {
+    paddingBottom: 20,
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'android' ? 48 : 16,
-    paddingBottom: 16,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: '700',
-    color: colors.text,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingTop: 16,
+    paddingBottom: 4,
   },
+
+  // Scroll
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  profileHeader: {
+
+  // Account banner
+  accountBanner: {
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
-  profileName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
+  accountBannerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
-  profileEmail: {
-    fontSize: 16,
-    color: colors.textSecondary,
+  accountBannerSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 18,
   },
-  section: {
-    marginBottom: 32,
+  starEmoji: {
+    fontSize: 48,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  infoCard: {
-    backgroundColor: colors.card,
+
+  // Plan card
+  planCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    shadowColor: colors.shadow,
+    marginBottom: 14,
+    shadowColor: 'rgba(0,0,0,0.06)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOpacity: 1,
+    shadowRadius: 6,
     elevation: 3,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  infoLabel: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  infoValue: {
-    fontSize: 16,
+  planCardTitle: {
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  settingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
+    color: '#1A2340',
     marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+  },
+  planRowsContainer: {},
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 10,
+  },
+  planRowIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEF2F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planRowLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#718096',
+  },
+  planRowValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A2340',
+  },
+  planDivider: {
+    height: 1,
+    backgroundColor: '#EEF2F8',
+    marginLeft: 42,
+  },
+
+  // Add plan button
+  addPlanBtn: {
+    backgroundColor: '#E53E3E',
+    borderRadius: 30,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#E53E3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
+    elevation: 5,
+  },
+  addPlanBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  // Premium banner
+  premiumBanner: {
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  premiumBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+  },
+  premiumBannerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 28,
+    marginBottom: 6,
+  },
+  premiumBannerSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 18,
+  },
+  premiumStarEmoji: {
+    fontSize: 64,
+  },
+
+  // Disclaimer
+  disclaimerCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+    gap: 10,
+    alignItems: 'flex-start',
+    borderLeftWidth: 3,
+    borderLeftColor: '#D97706',
+  },
+  disclaimerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 19,
+  },
+  disclaimerBold: {
+    fontWeight: '700',
+  },
+
+  // Settings
+  settingsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A2340',
+    marginBottom: 12,
+  },
+  settingsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: 'rgba(0,0,0,0.06)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
     elevation: 3,
   },
-  settingText: {
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  settingIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#EEF2F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingLabel: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginLeft: 12,
+    fontSize: 14,
+    color: '#4A5568',
+  },
+  settingRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  settingRightValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A2340',
+  },
+  settingDivider: {
+    height: 1,
+    backgroundColor: '#F0F4FA',
+    marginLeft: 62,
   },
 });
